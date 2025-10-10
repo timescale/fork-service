@@ -26,7 +26,8 @@ function sleep(ms: number): Promise<void> {
  * @param serviceId - The service ID to poll
  * @param apiKey - The API key for authentication
  * @param timeoutMs - Maximum time to wait in milliseconds (default: 30 minutes)
- * @param intervalMs - Polling interval in milliseconds (default: 10 seconds)
+ * @param intervalMs - Polling interval in milliseconds (default: 1 second)
+ * @param logIntervalMs - Log status updates every N milliseconds (default: 10 seconds)
  * @returns The service when it's ready
  * @throws Error if timeout is reached or service enters an error state
  */
@@ -35,17 +36,22 @@ export async function waitForServiceReady(
   serviceId: string,
   apiKey: string,
   timeoutMs: number = 30 * 60 * 1000, // 30 minutes default
-  intervalMs: number = 10 * 1000 // 10 seconds default
+  intervalMs: number = 1 * 1000, // 1 second default
+  logIntervalMs: number = 10 * 1000 // Log every 10 seconds
 ): Promise<void> {
   const startTime = Date.now()
+  let nextLogTime = startTime + logIntervalMs
 
   core.info(
     `Waiting for service ${serviceId} to be ready (timeout: ${timeoutMs / 1000}s)...`
   )
 
   while (true) {
+    const now = Date.now()
+    const elapsed = Math.round((now - startTime) / 1000)
+
     // Check timeout
-    if (Date.now() - startTime > timeoutMs) {
+    if (now - startTime > timeoutMs) {
       throw new Error(
         `Timeout: Service ${serviceId} did not become ready within ${timeoutMs / 1000} seconds`
       )
@@ -55,14 +61,12 @@ export async function waitForServiceReady(
       const service = await getService(projectId, serviceId, apiKey)
 
       core.debug(
-        `Service ${serviceId} status: ${service.status} (elapsed: ${Math.round((Date.now() - startTime) / 1000)}s)`
+        `Service ${serviceId} status: ${service.status} (elapsed: ${elapsed}s)`
       )
 
       // Check if service is ready
       if (service.status === 'READY') {
-        core.info(
-          `Service ${serviceId} is ready! (took ${Math.round((Date.now() - startTime) / 1000)}s)`
-        )
+        core.info(`Service ${serviceId} is ready! (took ${elapsed}s)`)
         return
       }
 
@@ -73,10 +77,14 @@ export async function waitForServiceReady(
         )
       }
 
-      // Service is still being provisioned, wait and try again
-      core.info(
-        `Service ${serviceId} status: ${service.status}. Waiting ${intervalMs / 1000}s before next check...`
-      )
+      // Log status at regular intervals based on elapsed time from start
+      if (Date.now() >= nextLogTime) {
+        core.info(
+          `Service ${serviceId} status: ${service.status}. Still waiting... (elapsed: ${elapsed}s)`
+        )
+        nextLogTime += logIntervalMs
+      }
+
       await sleep(intervalMs)
     } catch (error) {
       // If it's already our error, rethrow it
