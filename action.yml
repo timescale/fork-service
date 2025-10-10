@@ -40,6 +40,12 @@ inputs:
 outputs:
   service_id:
     description: The ID of the forked service
+  host:
+    description: The hostname/endpoint of the forked service
+  port:
+    description: The port number of the forked service
+  initial_password:
+    description: The initial password for the forked service
 
 runs:
   using: node24

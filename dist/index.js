@@ -27481,9 +27481,22 @@ async function run() {
         // Wait for the forked service to be ready
         coreExports.info('Waiting for forked service to be ready...');
         await waitForServiceReady(projectId, forkedService.service_id, apiKey);
-        // Set output for other workflow steps to use
+        // Set outputs for other workflow steps to use
         coreExports.setOutput('service_id', forkedService.service_id);
+        // Set connection information outputs
+        if (forkedService.endpoint) {
+            coreExports.setOutput('host', forkedService.endpoint.host);
+            coreExports.setOutput('port', forkedService.endpoint.port.toString());
+        }
+        if (forkedService.initial_password) {
+            // Mask the password in logs
+            coreExports.setSecret(forkedService.initial_password);
+            coreExports.setOutput('initial_password', forkedService.initial_password);
+        }
         coreExports.info(`Fork operation completed successfully! Forked service ID: ${forkedService.service_id}`);
+        if (forkedService.endpoint) {
+            coreExports.info(`Connection: ${forkedService.endpoint.host}:${forkedService.endpoint.port}`);
+        }
         // Save state for post-action cleanup
         const cleanup = coreExports.getInput('cleanup', { required: false }) || 'false';
         if (cleanup.toLowerCase() === 'true') {

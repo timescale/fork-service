@@ -38,7 +38,12 @@ describe('main.ts', () => {
       project_id: 'project-456',
       name: 'test-fork',
       region_code: 'us-east-1',
-      status: 'QUEUED'
+      status: 'QUEUED',
+      endpoint: {
+        host: 'test-fork.timescaledb.io',
+        port: 5432
+      },
+      initial_password: 'test-password-123'
     })
 
     mockWaitForServiceReady.mockResolvedValue(undefined)
@@ -79,10 +84,19 @@ describe('main.ts', () => {
       'public-key:secret-key'
     )
 
-    // Verify output was set
+    // Verify all outputs were set
     expect(core.setOutput).toHaveBeenCalledWith(
       'service_id',
       'forked-service-123'
+    )
+    expect(core.setOutput).toHaveBeenCalledWith(
+      'host',
+      'test-fork.timescaledb.io'
+    )
+    expect(core.setOutput).toHaveBeenCalledWith('port', '5432')
+    expect(core.setOutput).toHaveBeenCalledWith(
+      'initial_password',
+      'test-password-123'
     )
 
     // Verify no failures

@@ -85,12 +85,30 @@ export async function run(): Promise<void> {
     core.info('Waiting for forked service to be ready...')
     await waitForServiceReady(projectId, forkedService.service_id, apiKey)
 
-    // Set output for other workflow steps to use
+    // Set outputs for other workflow steps to use
     core.setOutput('service_id', forkedService.service_id)
+
+    // Set connection information outputs
+    if (forkedService.endpoint) {
+      core.setOutput('host', forkedService.endpoint.host)
+      core.setOutput('port', forkedService.endpoint.port.toString())
+    }
+
+    if (forkedService.initial_password) {
+      // Mask the password in logs
+      core.setSecret(forkedService.initial_password)
+      core.setOutput('initial_password', forkedService.initial_password)
+    }
 
     core.info(
       `Fork operation completed successfully! Forked service ID: ${forkedService.service_id}`
     )
+
+    if (forkedService.endpoint) {
+      core.info(
+        `Connection: ${forkedService.endpoint.host}:${forkedService.endpoint.port}`
+      )
+    }
 
     // Save state for post-action cleanup
     const cleanup = core.getInput('cleanup', { required: false }) || 'false'
