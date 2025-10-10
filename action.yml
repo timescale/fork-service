@@ -1,23 +1,38 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
+name: Tiger Data - Fork Service
+description: Fork an existing database to e.g. run tests on it
+author: Tiger Data
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: heart
-  color: red
+  icon: database
+  color: yellow
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: Your input description here
+  project_id:
+    description: The project ID of your service
     required: true
-    default: '1000'
+  service_id:
+    description: The service ID of your service
+    required: true
+  api_key:
+    description: A Tiger Data API key in format publicKey:secretKey
+    required: true
+  forking-strategy:
+    description: The forking strategy to use
+    required: true
+    options:
+      - now
+      - last-snapshot
+      - timestamp
+  timestamp:
+    description: The timestamp to use for the fork format 2025-10-01T15:29:00Z
+    required: false
 
 # Define your outputs here.
 outputs:
-  time:
-    description: Your output description here
+  service_id:
+    description: The ID of the forked service
 
 runs:
   using: node24
