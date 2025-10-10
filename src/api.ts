@@ -134,3 +134,22 @@ export async function getService(
     method: 'GET'
   })
 }
+
+/**
+ * Deletes a service
+ *
+ * @param projectId - The project ID
+ * @param serviceId - The service ID to delete
+ * @param apiKey - The API key for authentication
+ */
+export async function deleteService(
+  projectId: string,
+  serviceId: string,
+  apiKey: string
+): Promise<void> {
+  const endpoint = `/projects/${projectId}/services/${serviceId}`
+
+  await makeRequest<void>(endpoint, apiKey, {
+    method: 'DELETE'
+  })
+}

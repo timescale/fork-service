@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import { forkService } from './api.js'
+import { forkService, deleteService } from './api.js'
 import { waitForServiceReady } from './poll.js'
 import type { ForkStrategy, ForkServiceRequest } from './types.js'
 
@@ -91,12 +91,67 @@ export async function run(): Promise<void> {
     core.info(
       `Fork operation completed successfully! Forked service ID: ${forkedService.service_id}`
     )
+
+    // Save state for post-action cleanup
+    const cleanup = core.getInput('cleanup', { required: false }) || 'false'
+    if (cleanup.toLowerCase() === 'true') {
+      core.saveState('forked_service_id', forkedService.service_id)
+      core.saveState('project_id', projectId)
+      core.saveState('api_key', apiKey)
+      core.saveState('cleanup', 'true')
+      core.info(
+        'Cleanup is enabled. Service will be deleted after workflow completes.'
+      )
+    }
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) {
       core.setFailed(error.message)
     } else {
       core.setFailed(String(error))
+    }
+  }
+}
+
+/**
+ * The post function for the action.
+ * This runs after the workflow completes to clean up resources.
+ *
+ * @returns Resolves when cleanup is complete.
+ */
+export async function post(): Promise<void> {
+  try {
+    // Check if cleanup is enabled
+    const cleanup = core.getState('cleanup')
+    if (cleanup !== 'true') {
+      core.info('Cleanup not enabled, skipping service deletion.')
+      return
+    }
+
+    // Retrieve saved state
+    const forkedServiceId = core.getState('forked_service_id')
+    const projectId = core.getState('project_id')
+    const apiKey = core.getState('api_key')
+
+    if (!forkedServiceId || !projectId || !apiKey) {
+      core.warning(
+        'Missing required state for cleanup. Skipping service deletion.'
+      )
+      return
+    }
+
+    core.info(`Cleaning up forked service: ${forkedServiceId}`)
+
+    // Delete the forked service
+    await deleteService(projectId, forkedServiceId, apiKey)
+
+    core.info(`Successfully deleted forked service: ${forkedServiceId}`)
+  } catch (error) {
+    // Don't fail the workflow if cleanup fails, just warn
+    if (error instanceof Error) {
+      core.warning(`Failed to cleanup forked service: ${error.message}`)
+    } else {
+      core.warning(`Failed to cleanup forked service: ${String(error)}`)
     }
   }
 }

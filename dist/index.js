@@ -27484,6 +27484,15 @@ async function run() {
         // Set output for other workflow steps to use
         coreExports.setOutput('service_id', forkedService.service_id);
         coreExports.info(`Fork operation completed successfully! Forked service ID: ${forkedService.service_id}`);
+        // Save state for post-action cleanup
+        const cleanup = coreExports.getInput('cleanup', { required: false }) || 'false';
+        if (cleanup.toLowerCase() === 'true') {
+            coreExports.saveState('forked_service_id', forkedService.service_id);
+            coreExports.saveState('project_id', projectId);
+            coreExports.saveState('api_key', apiKey);
+            coreExports.saveState('cleanup', 'true');
+            coreExports.info('Cleanup is enabled. Service will be deleted after workflow completes.');
+        }
     }
     catch (error) {
         // Fail the workflow run if an error occurs

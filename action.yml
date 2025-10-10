@@ -25,6 +25,13 @@ inputs:
       - now
       - last-snapshot
       - timestamp
+  cleanup:
+    description: Whether to delete the fork after the workflow is complete
+    required: false
+    default: false
+    options:
+      - true
+      - false
   timestamp:
     description: The timestamp to use for the fork format 2025-10-01T15:29:00Z
     required: false
@@ -37,3 +44,4 @@ outputs:
 runs:
   using: node24
   main: dist/index.js
+  post: dist/cleanup.js

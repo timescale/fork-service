@@ -7,10 +7,12 @@ import * as core from '../__fixtures__/core.js'
 // Mock the API module
 const mockForkService = jest.fn()
 const mockGetService = jest.fn()
+const mockDeleteService = jest.fn()
 
 jest.unstable_mockModule('../src/api.js', () => ({
   forkService: mockForkService,
-  getService: mockGetService
+  getService: mockGetService,
+  deleteService: mockDeleteService
 }))
 
 // Mock the poll module
