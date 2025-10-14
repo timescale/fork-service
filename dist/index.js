@@ -27489,11 +27489,9 @@ async function run() {
             }
         }
         const freeStr = coreExports.getInput('free', { required: false });
-        coreExports.info(`DEBUG: free input value: "${freeStr}" (type: ${typeof freeStr})`);
         if (freeStr) {
             forkRequest.free = freeStr.toLowerCase() === 'true';
         }
-        coreExports.info(`DEBUG: Fork request body: ${JSON.stringify(forkRequest, null, 2)}`);
         // If using PITR strategy, timestamp is required
         if (forkStrategy === 'PITR') {
             if (!timestamp) {
