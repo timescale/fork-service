@@ -321,4 +321,213 @@ describe('main.ts', () => {
       'public-key:secret-key'
     )
   })
+
+  it('Successfully forks a service with custom name', async () => {
+    core.getInput.mockImplementation((name: string) => {
+      switch (name) {
+        case 'project_id':
+          return 'project-456'
+        case 'service_id':
+          return 'service-789'
+        case 'api_key':
+          return 'public-key:secret-key'
+        case 'forking-strategy':
+          return 'now'
+        case 'name':
+          return 'my-custom-fork-name'
+        default:
+          return ''
+      }
+    })
+
+    await run()
+
+    // Verify forkService was called with custom name
+    expect(mockForkService).toHaveBeenCalledWith(
+      'project-456',
+      'service-789',
+      {
+        fork_strategy: 'NOW',
+        name: 'my-custom-fork-name'
+      },
+      'public-key:secret-key'
+    )
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
+
+  it('Successfully forks a service with custom cpu_millis', async () => {
+    core.getInput.mockImplementation((name: string) => {
+      switch (name) {
+        case 'project_id':
+          return 'project-456'
+        case 'service_id':
+          return 'service-789'
+        case 'api_key':
+          return 'public-key:secret-key'
+        case 'forking-strategy':
+          return 'now'
+        case 'cpu_millis':
+          return '2000'
+        default:
+          return ''
+      }
+    })
+
+    await run()
+
+    // Verify forkService was called with custom cpu_millis
+    expect(mockForkService).toHaveBeenCalledWith(
+      'project-456',
+      'service-789',
+      {
+        fork_strategy: 'NOW',
+        cpu_millis: 2000
+      },
+      'public-key:secret-key'
+    )
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
+
+  it('Successfully forks a service with custom memory_gbs', async () => {
+    core.getInput.mockImplementation((name: string) => {
+      switch (name) {
+        case 'project_id':
+          return 'project-456'
+        case 'service_id':
+          return 'service-789'
+        case 'api_key':
+          return 'public-key:secret-key'
+        case 'forking-strategy':
+          return 'now'
+        case 'memory_gbs':
+          return '8'
+        default:
+          return ''
+      }
+    })
+
+    await run()
+
+    // Verify forkService was called with custom memory_gbs
+    expect(mockForkService).toHaveBeenCalledWith(
+      'project-456',
+      'service-789',
+      {
+        fork_strategy: 'NOW',
+        memory_gbs: 8
+      },
+      'public-key:secret-key'
+    )
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
+
+  it('Successfully forks a service with free=true', async () => {
+    core.getInput.mockImplementation((name: string) => {
+      switch (name) {
+        case 'project_id':
+          return 'project-456'
+        case 'service_id':
+          return 'service-789'
+        case 'api_key':
+          return 'public-key:secret-key'
+        case 'forking-strategy':
+          return 'now'
+        case 'free':
+          return 'true'
+        default:
+          return ''
+      }
+    })
+
+    await run()
+
+    // Verify forkService was called with free=true
+    expect(mockForkService).toHaveBeenCalledWith(
+      'project-456',
+      'service-789',
+      {
+        fork_strategy: 'NOW',
+        free: true
+      },
+      'public-key:secret-key'
+    )
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
+
+  it('Successfully forks a service with all optional parameters', async () => {
+    core.getInput.mockImplementation((name: string) => {
+      switch (name) {
+        case 'project_id':
+          return 'project-456'
+        case 'service_id':
+          return 'service-789'
+        case 'api_key':
+          return 'public-key:secret-key'
+        case 'forking-strategy':
+          return 'timestamp'
+        case 'timestamp':
+          return '2025-10-01T15:29:00Z'
+        case 'name':
+          return 'complete-fork'
+        case 'cpu_millis':
+          return '4000'
+        case 'memory_gbs':
+          return '16'
+        default:
+          return ''
+      }
+    })
+
+    await run()
+
+    // Verify forkService was called with all parameters
+    expect(mockForkService).toHaveBeenCalledWith(
+      'project-456',
+      'service-789',
+      {
+        fork_strategy: 'PITR',
+        target_time: '2025-10-01T15:29:00Z',
+        name: 'complete-fork',
+        cpu_millis: 4000,
+        memory_gbs: 16
+      },
+      'public-key:secret-key'
+    )
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
+
+  it('Omits optional parameters when not provided', async () => {
+    core.getInput.mockImplementation((name: string) => {
+      switch (name) {
+        case 'project_id':
+          return 'project-456'
+        case 'service_id':
+          return 'service-789'
+        case 'api_key':
+          return 'public-key:secret-key'
+        case 'forking-strategy':
+          return 'now'
+        default:
+          return ''
+      }
+    })
+
+    await run()
+
+    // Verify forkService was called with only required parameters
+    // Optional parameters should not be present in the request object
+    expect(mockForkService).toHaveBeenCalledWith(
+      'project-456',
+      'service-789',
+      { fork_strategy: 'NOW' },
+      'public-key:secret-key'
+    )
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
 })

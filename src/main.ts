@@ -51,6 +51,33 @@ export async function run(): Promise<void> {
       fork_strategy: forkStrategy
     }
 
+    // Add optional parameters if provided
+    const name = core.getInput('name', { required: false })
+    if (name) {
+      forkRequest.name = name
+    }
+
+    const cpuMillisStr = core.getInput('cpu_millis', { required: false })
+    if (cpuMillisStr) {
+      const cpuMillis = parseInt(cpuMillisStr, 10)
+      if (!isNaN(cpuMillis)) {
+        forkRequest.cpu_millis = cpuMillis
+      }
+    }
+
+    const memoryGbsStr = core.getInput('memory_gbs', { required: false })
+    if (memoryGbsStr) {
+      const memoryGbs = parseInt(memoryGbsStr, 10)
+      if (!isNaN(memoryGbs)) {
+        forkRequest.memory_gbs = memoryGbs
+      }
+    }
+
+    const freeStr = core.getInput('free', { required: false })
+    if (freeStr) {
+      forkRequest.free = freeStr.toLowerCase() === 'true'
+    }
+
     // If using PITR strategy, timestamp is required
     if (forkStrategy === 'PITR') {
       if (!timestamp) {
