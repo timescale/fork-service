@@ -458,6 +458,40 @@ describe('main.ts', () => {
     expect(core.setFailed).not.toHaveBeenCalled()
   })
 
+  it('Successfully forks a service with free=false', async () => {
+    core.getInput.mockImplementation((name: string) => {
+      switch (name) {
+        case 'project_id':
+          return 'project-456'
+        case 'service_id':
+          return 'service-789'
+        case 'api_key':
+          return 'public-key:secret-key'
+        case 'forking-strategy':
+          return 'now'
+        case 'free':
+          return 'false'
+        default:
+          return ''
+      }
+    })
+
+    await run()
+
+    // Verify forkService was called with free=false
+    expect(mockForkService).toHaveBeenCalledWith(
+      'project-456',
+      'service-789',
+      {
+        fork_strategy: 'NOW',
+        free: false
+      },
+      'public-key:secret-key'
+    )
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
+
   it('Successfully forks a service with all optional parameters', async () => {
     core.getInput.mockImplementation((name: string) => {
       switch (name) {

@@ -27469,6 +27469,31 @@ async function run() {
         const forkRequest = {
             fork_strategy: forkStrategy
         };
+        // Add optional parameters if provided
+        const name = coreExports.getInput('name', { required: false });
+        if (name) {
+            forkRequest.name = name;
+        }
+        const cpuMillisStr = coreExports.getInput('cpu_millis', { required: false });
+        if (cpuMillisStr) {
+            const cpuMillis = parseInt(cpuMillisStr, 10);
+            if (!isNaN(cpuMillis)) {
+                forkRequest.cpu_millis = cpuMillis;
+            }
+        }
+        const memoryGbsStr = coreExports.getInput('memory_gbs', { required: false });
+        if (memoryGbsStr) {
+            const memoryGbs = parseInt(memoryGbsStr, 10);
+            if (!isNaN(memoryGbs)) {
+                forkRequest.memory_gbs = memoryGbs;
+            }
+        }
+        const freeStr = coreExports.getInput('free', { required: false });
+        coreExports.info(`DEBUG: free input value: "${freeStr}" (type: ${typeof freeStr})`);
+        if (freeStr) {
+            forkRequest.free = freeStr.toLowerCase() === 'true';
+        }
+        coreExports.info(`DEBUG: Fork request body: ${JSON.stringify(forkRequest, null, 2)}`);
         // If using PITR strategy, timestamp is required
         if (forkStrategy === 'PITR') {
             if (!timestamp) {

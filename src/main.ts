@@ -74,9 +74,14 @@ export async function run(): Promise<void> {
     }
 
     const freeStr = core.getInput('free', { required: false })
+    core.info(`DEBUG: free input value: "${freeStr}" (type: ${typeof freeStr})`)
     if (freeStr) {
       forkRequest.free = freeStr.toLowerCase() === 'true'
     }
+
+    core.info(
+      `DEBUG: Fork request body: ${JSON.stringify(forkRequest, null, 2)}`
+    )
 
     // If using PITR strategy, timestamp is required
     if (forkStrategy === 'PITR') {

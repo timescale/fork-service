@@ -36,16 +36,22 @@ inputs:
     description: The timestamp to use for the fork format 2025-10-01T15:29:00Z
     required: false
   name:
-    description: Custom name for the forked service (defaults to parent service name with "-fork" suffix)
+    description:
+      Custom name for the forked service (defaults to parent service name with
+      "-fork" suffix)
     required: false
   cpu_millis:
-    description: CPU allocation in milli-cores (defaults to parent service allocation)
+    description:
+      CPU allocation in milli-cores (defaults to parent service allocation)
     required: false
   memory_gbs:
-    description: Memory allocation in gigabytes (defaults to parent service allocation)
+    description:
+      Memory allocation in gigabytes (defaults to parent service allocation)
     required: false
   free:
-    description: Whether to create a free tier forked service (if true, cpu_millis and memory_gbs must not be provided)
+    description:
+      Whether to create a free tier forked service (if true, cpu_millis and
+      memory_gbs must not be provided)
     required: false
 
 # Define your outputs here.
