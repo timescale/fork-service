@@ -1,5 +1,3 @@
-# Tiger Data Fork Service Action
-
 <div align=center>
 <picture align=center>
     <source media="(prefers-color-scheme: dark)" srcset="https://assets.timescale.com/docs/images/tigerdata-gradient-white.svg">
