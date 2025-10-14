@@ -27246,20 +27246,206 @@ function requireCore () {
 
 var coreExports = requireCore();
 
+const API_BASE_URL = 'https://console.cloud.timescale.com/public/api/v1';
 /**
- * Waits for a number of milliseconds.
+ * Creates the Authorization header for API requests
+ * The API key should be in format "publicKey:secretKey"
+ * It is Base64 encoded and sent with the Basic scheme
  *
- * @param milliseconds The number of milliseconds to wait.
- * @returns Resolves with 'done!' after the wait is over.
+ * @param apiKey - The API key in format "publicKey:secretKey"
+ * @returns The Authorization header value
  */
-async function wait(milliseconds) {
-    return new Promise((resolve) => {
-        if (isNaN(milliseconds))
-            throw new Error('milliseconds is not a number');
-        setTimeout(() => resolve('done!'), milliseconds);
+function createAuthHeader(apiKey) {
+    const encoded = Buffer.from(apiKey).toString('base64');
+    return `Basic ${encoded}`;
+}
+/**
+ * Makes an authenticated API request
+ *
+ * @param endpoint - The API endpoint (relative to base URL)
+ * @param apiKey - The API key for authentication
+ * @param options - Additional fetch options
+ * @returns The response data
+ * @throws Error if the request fails
+ */
+async function makeRequest(endpoint, apiKey, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const method = options.method || 'GET';
+    const headers = {
+        Authorization: createAuthHeader(apiKey),
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    let response;
+    try {
+        response = await fetch(url, {
+            ...options,
+            headers
+        });
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Network request failed for ${method} ${url}: ${errorMessage}. ` +
+            `Please check your network connection and verify the API endpoint is accessible.`);
+    }
+    // Handle non-2xx responses
+    if (!response.ok) {
+        let errorMessage = `API request failed: ${method} ${url} returned ${response.status} ${response.statusText}`;
+        // Read the response body once as text
+        try {
+            const responseText = await response.text();
+            if (responseText) {
+                // Try to parse as JSON
+                try {
+                    const errorData = JSON.parse(responseText);
+                    if (errorData.message) {
+                        errorMessage = `API Error (${errorData.code || response.status}): ${errorData.message}`;
+                    }
+                }
+                catch {
+                    // Not JSON, include the raw text
+                    errorMessage += `\nResponse: ${responseText.substring(0, 500)}`;
+                }
+            }
+        }
+        catch {
+            // If we can't read the response, use the default message
+        }
+        throw new Error(errorMessage);
+    }
+    // Read response body as text first
+    const responseText = await response.text();
+    // Handle empty responses (202/204 typically)
+    if (!responseText) {
+        return {};
+    }
+    // Parse as JSON
+    return JSON.parse(responseText);
+}
+/**
+ * Forks a service
+ *
+ * @param projectId - The project ID
+ * @param serviceId - The service ID to fork
+ * @param request - The fork request parameters
+ * @param apiKey - The API key for authentication
+ * @returns The newly created service
+ */
+async function forkService(projectId, serviceId, request, apiKey) {
+    const endpoint = `/projects/${projectId}/services/${serviceId}/forkService`;
+    return makeRequest(endpoint, apiKey, {
+        method: 'POST',
+        body: JSON.stringify(request)
+    });
+}
+/**
+ * Gets the status of a service
+ *
+ * @param projectId - The project ID
+ * @param serviceId - The service ID to check
+ * @param apiKey - The API key for authentication
+ * @returns The service details
+ */
+async function getService(projectId, serviceId, apiKey) {
+    const endpoint = `/projects/${projectId}/services/${serviceId}`;
+    return makeRequest(endpoint, apiKey, {
+        method: 'GET'
     });
 }
 
+/**
+ * Polling utilities for waiting on asynchronous operations
+ */
+/**
+ * Terminal states that indicate the service will not become ready
+ */
+const TERMINAL_ERROR_STATES = ['DELETED', 'UNSTABLE'];
+/**
+ * Sleep for a specified number of milliseconds
+ *
+ * @param ms - Milliseconds to sleep
+ */
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+/**
+ * Waits for a forked service to be ready
+ *
+ * @param projectId - The project ID
+ * @param serviceId - The service ID to poll
+ * @param apiKey - The API key for authentication
+ * @param timeoutMs - Maximum time to wait in milliseconds (default: 30 minutes)
+ * @param intervalMs - Polling interval in milliseconds (default: 1 second)
+ * @param logIntervalMs - Log status updates every N milliseconds (default: 10 seconds)
+ * @returns The service when it's ready
+ * @throws Error if timeout is reached or service enters an error state
+ */
+async function waitForServiceReady(projectId, serviceId, apiKey, timeoutMs = 30 * 60 * 1000, // 30 minutes default
+intervalMs = 1 * 1000, // 1 second default
+logIntervalMs = 10 * 1000 // Log every 10 seconds
+) {
+    const startTime = Date.now();
+    let nextLogTime = startTime + logIntervalMs;
+    coreExports.info(`Waiting for service ${serviceId} to be ready (timeout: ${timeoutMs / 1000}s)...`);
+    while (true) {
+        const now = Date.now();
+        const elapsed = Math.round((now - startTime) / 1000);
+        // Check timeout
+        if (now - startTime > timeoutMs) {
+            throw new Error(`Timeout: Service ${serviceId} did not become ready within ${timeoutMs / 1000} seconds`);
+        }
+        try {
+            const service = await getService(projectId, serviceId, apiKey);
+            coreExports.debug(`Service ${serviceId} status: ${service.status} (elapsed: ${elapsed}s)`);
+            // Check if service is ready
+            if (service.status === 'READY') {
+                coreExports.info(`Service ${serviceId} is ready! (took ${elapsed}s)`);
+                return;
+            }
+            // Check for terminal error states
+            if (TERMINAL_ERROR_STATES.includes(service.status)) {
+                throw new Error(`Service ${serviceId} entered terminal state: ${service.status}`);
+            }
+            // Log status at regular intervals based on elapsed time from start
+            if (Date.now() >= nextLogTime) {
+                coreExports.info(`Service ${serviceId} status: ${service.status}. Still waiting... (elapsed: ${elapsed}s)`);
+                nextLogTime += logIntervalMs;
+            }
+            await sleep(intervalMs);
+        }
+        catch (error) {
+            // If it's already our error, rethrow it
+            if (error instanceof Error && error.message.includes('terminal state')) {
+                throw error;
+            }
+            if (error instanceof Error && error.message.includes('Timeout')) {
+                throw error;
+            }
+            // For API errors, log and retry (the service might be temporarily unavailable)
+            coreExports.warning(`Error checking service status: ${error instanceof Error ? error.message : String(error)}. Will retry...`);
+            await sleep(intervalMs);
+        }
+    }
+}
+
+/**
+ * Maps the user-friendly forking strategy from action.yml to the API enum
+ *
+ * @param strategy - The strategy from action input (now, last-snapshot, timestamp)
+ * @returns The API fork strategy enum
+ */
+function mapForkStrategy(strategy) {
+    switch (strategy.toLowerCase()) {
+        case 'now':
+            return 'NOW';
+        case 'last-snapshot':
+            return 'LAST_SNAPSHOT';
+        case 'timestamp':
+            return 'PITR';
+        default:
+            throw new Error(`Invalid forking strategy: ${strategy}. Must be one of: now, last-snapshot, timestamp`);
+    }
+}
 /**
  * The main function for the action.
  *
@@ -27267,20 +27453,99 @@ async function wait(milliseconds) {
  */
 async function run() {
     try {
-        const ms = coreExports.getInput('milliseconds');
-        // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-        coreExports.debug(`Waiting ${ms} milliseconds ...`);
-        // Log the current timestamp, wait, then log the new timestamp
-        coreExports.debug(new Date().toTimeString());
-        await wait(parseInt(ms, 10));
-        coreExports.debug(new Date().toTimeString());
+        // Get inputs from action.yml
+        const projectId = coreExports.getInput('project_id', { required: true });
+        const serviceId = coreExports.getInput('service_id', { required: true });
+        const apiKey = coreExports.getInput('api_key', { required: true });
+        const forkingStrategy = coreExports.getInput('forking-strategy', {
+            required: true
+        });
+        const timestamp = coreExports.getInput('timestamp', { required: false });
+        coreExports.info(`Starting fork operation for service ${serviceId}...`);
+        coreExports.info(`Fork strategy: ${forkingStrategy}`);
+        // Map the forking strategy to API enum
+        const forkStrategy = mapForkStrategy(forkingStrategy);
+        // Build the fork request
+        const forkRequest = {
+            fork_strategy: forkStrategy
+        };
+        // Add optional parameters if provided
+        const name = coreExports.getInput('name', { required: false });
+        if (name) {
+            forkRequest.name = name;
+        }
+        const cpuMillisStr = coreExports.getInput('cpu_millis', { required: false });
+        if (cpuMillisStr) {
+            const cpuMillis = parseInt(cpuMillisStr, 10);
+            if (!isNaN(cpuMillis)) {
+                forkRequest.cpu_millis = cpuMillis;
+            }
+        }
+        const memoryGbsStr = coreExports.getInput('memory_gbs', { required: false });
+        if (memoryGbsStr) {
+            const memoryGbs = parseInt(memoryGbsStr, 10);
+            if (!isNaN(memoryGbs)) {
+                forkRequest.memory_gbs = memoryGbs;
+            }
+        }
+        const freeStr = coreExports.getInput('free', { required: false });
+        if (freeStr) {
+            forkRequest.free = freeStr.toLowerCase() === 'true';
+        }
+        // If using PITR strategy, timestamp is required
+        if (forkStrategy === 'PITR') {
+            if (!timestamp) {
+                throw new Error('timestamp input is required when using "timestamp" forking strategy');
+            }
+            forkRequest.target_time = timestamp;
+            coreExports.info(`Using target time: ${timestamp}`);
+        }
+        else if (timestamp) {
+            // Warn if timestamp is provided but not using PITR
+            coreExports.warning('timestamp input is ignored when not using "timestamp" forking strategy');
+        }
+        // Call the fork API
+        coreExports.info('Calling fork service API...');
+        const forkedService = await forkService(projectId, serviceId, forkRequest, apiKey);
+        coreExports.info(`Fork initiated successfully! New service ID: ${forkedService.service_id}`);
+        coreExports.info(`Initial status: ${forkedService.status}`);
+        // Wait for the forked service to be ready
+        coreExports.info('Waiting for forked service to be ready...');
+        await waitForServiceReady(projectId, forkedService.service_id, apiKey);
         // Set outputs for other workflow steps to use
-        coreExports.setOutput('time', new Date().toTimeString());
+        coreExports.setOutput('service_id', forkedService.service_id);
+        // Set connection information outputs
+        if (forkedService.endpoint) {
+            coreExports.setOutput('host', forkedService.endpoint.host);
+            coreExports.setOutput('port', forkedService.endpoint.port.toString());
+        }
+        if (forkedService.initial_password) {
+            // Mask the password in logs
+            coreExports.setSecret(forkedService.initial_password);
+            coreExports.setOutput('initial_password', forkedService.initial_password);
+        }
+        coreExports.info(`Fork operation completed successfully! Forked service ID: ${forkedService.service_id}`);
+        if (forkedService.endpoint) {
+            coreExports.info(`Connection: ${forkedService.endpoint.host}:${forkedService.endpoint.port}`);
+        }
+        // Save state for post-action cleanup
+        const cleanup = coreExports.getInput('cleanup', { required: false }) || 'false';
+        if (cleanup.toLowerCase() === 'true') {
+            coreExports.saveState('forked_service_id', forkedService.service_id);
+            coreExports.saveState('project_id', projectId);
+            coreExports.saveState('api_key', apiKey);
+            coreExports.saveState('cleanup', 'true');
+            coreExports.info('Cleanup is enabled. Service will be deleted after workflow completes.');
+        }
     }
     catch (error) {
         // Fail the workflow run if an error occurs
-        if (error instanceof Error)
+        if (error instanceof Error) {
             coreExports.setFailed(error.message);
+        }
+        else {
+            coreExports.setFailed(String(error));
+        }
     }
 }
 
