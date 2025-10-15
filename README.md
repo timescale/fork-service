@@ -21,7 +21,7 @@ Fork a Tiger Data database service for testing, development or ephemeral use.
     project_id: your-project-id
     service_id: your-service-id
     api_key: ${{ secrets.TIGERDATA_API_KEY }}
-    forking-strategy: last-snapshot
+    fork_strategy: last-snapshot
 ```
 
 ### Fork for Pull Request Testing
@@ -45,7 +45,7 @@ jobs:
           project_id: your-project-id
           service_id: your-service-id
           api_key: ${{ secrets.TIGERDATA_API_KEY }}
-          forking-strategy: now
+          fork_strategy: now
           cleanup: true
           name: fork-${{ github.event.pull_request.number }}
 
@@ -60,24 +60,24 @@ jobs:
 
 ## Inputs
 
-| Input              | Required | Default | Description                                                                      |
-| ------------------ | -------- | ------- | -------------------------------------------------------------------------------- |
-| `project_id`       | Yes      | -       | The project ID of your service                                                   |
-| `service_id`       | Yes      | -       | The service ID of your service                                                   |
-| `api_key`          | Yes      | -       | A Tiger Data API key in format `publicKey:secretKey`                             |
-| `forking-strategy` | Yes      | -       | The forking strategy: `now`, `last-snapshot`, or `timestamp`                     |
-| `timestamp`        | No       | -       | Required when using `timestamp` strategy. Format: `2025-10-01T15:29:00Z`         |
-| `name`             | No       | -       | Custom name for the forked service (defaults to parent name with "-fork" suffix) |
-| `cpu_millis`       | No       | -       | CPU allocation in milli-cores (defaults to parent service allocation)            |
-| `memory_gbs`       | No       | -       | Memory allocation in gigabytes (defaults to parent service allocation)           |
-| `free`             | No       | -       | Whether to create a free tier forked service (defaults to parent service tier)   |
-| `cleanup`          | No       | `false` | Whether to delete the fork after the workflow completes                          |
+| Input           | Required | Default | Description                                                                                             |
+| --------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------- |
+| `project_id`    | Yes      | -       | The project ID of your service                                                                          |
+| `service_id`    | Yes      | -       | The service ID of your service                                                                          |
+| `api_key`       | Yes      | -       | A Tiger Data API key in format `publicKey:secretKey`                                                    |
+| `fork_strategy` | Yes      | -       | The forking strategy: `now`, `last-snapshot`, or `timestamp`                                            |
+| `target_time`   | No       | -       | Required when using `timestamp` strategy. Format: `2025-10-01T15:29:00Z`                                |
+| `name`          | No       | -       | Custom name for the forked service (defaults to parent name with "-fork" suffix)                        |
+| `cpu_millis`    | No       | -       | CPU allocation in milli-cores or `shared` for shared resources (defaults to parent service allocation)  |
+| `memory_gbs`    | No       | -       | Memory allocation in gigabytes or `shared` for shared resources (defaults to parent service allocation) |
+| `cleanup`       | No       | `false` | Whether to delete the fork after the workflow completes                                                 |
 
 ## Outputs
 
 | Output             | Description                                 |
 | ------------------ | ------------------------------------------- |
 | `service_id`       | The ID of the forked service                |
+| `name`             | The name of the forked service              |
 | `host`             | The hostname/endpoint of the forked service |
 | `port`             | The port number of the forked service       |
 | `initial_password` | The initial password for the forked service |
@@ -88,4 +88,30 @@ jobs:
 - **`last-snapshot`**: Uses the most recent existing snapshot (faster, but may
   be slightly behind)
 - **`timestamp`**: Point-in-time recovery from a specific timestamp (requires
-  `timestamp` input)
+  `target_time` input)
+
+## Resource Allocation
+
+You can specify the resource allocation for your forked service:
+
+- **Dedicated resources**: Provide numeric values for `cpu_millis` and
+  `memory_gbs` (e.g., `cpu_millis: "1000"` for 1 vCPU)
+- **Shared resources (free tier)**: Use `shared` for both `cpu_millis` and
+  `memory_gbs` to create a free tier fork with shared resources
+- **Parent resources**: Omit both parameters to inherit the resource allocation
+  from the parent service
+
+### Example: Creating a Free Tier Fork
+
+```yaml
+- name: Fork Database with Free Tier
+  uses: timescale/fork-service@v1
+  with:
+    project_id: your-project-id
+    service_id: your-service-id
+    api_key: ${{ secrets.TIGERDATA_API_KEY }}
+    fork_strategy: last-snapshot
+    cpu_millis: shared
+    memory_gbs: shared
+    cleanup: true
+```

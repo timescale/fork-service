@@ -18,7 +18,7 @@ inputs:
   api_key:
     description: A Tiger Data API key in format publicKey:secretKey
     required: true
-  forking-strategy:
+  fork_strategy:
     description: The forking strategy to use
     required: true
     options:
@@ -32,7 +32,7 @@ inputs:
     options:
       - true
       - false
-  timestamp:
+  target_time:
     description: The timestamp to use for the fork format 2025-10-01T15:29:00Z
     required: false
   name:
@@ -42,22 +42,21 @@ inputs:
     required: false
   cpu_millis:
     description:
-      CPU allocation in milli-cores (defaults to parent service allocation)
+      CPU allocation in milli-cores or 'shared' for shared resources (defaults
+      to parent service allocation)
     required: false
   memory_gbs:
     description:
-      Memory allocation in gigabytes (defaults to parent service allocation)
-    required: false
-  free:
-    description:
-      Whether to create a free tier forked service (if true, cpu_millis and
-      memory_gbs must not be provided)
+      Memory allocation in gigabytes or 'shared' for shared resources (defaults
+      to parent service allocation)
     required: false
 
 # Define your outputs here.
 outputs:
   service_id:
     description: The ID of the forked service
+  name:
+    description: The name of the forked service
   host:
     description: The hostname/endpoint of the forked service
   port:

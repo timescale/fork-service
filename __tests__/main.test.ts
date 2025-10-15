@@ -58,9 +58,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
-        case 'timestamp':
+        case 'target_time':
           return ''
         default:
           return ''
@@ -89,6 +89,7 @@ describe('main.ts', () => {
       'service_id',
       'forked-service-123'
     )
+    expect(core.setOutput).toHaveBeenCalledWith('name', 'test-fork')
     expect(core.setOutput).toHaveBeenCalledWith(
       'host',
       'test-fork.timescaledb.io'
@@ -112,9 +113,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'last-snapshot'
-        case 'timestamp':
+        case 'target_time':
           return ''
         default:
           return ''
@@ -143,9 +144,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'timestamp'
-        case 'timestamp':
+        case 'target_time':
           return '2025-10-01T15:29:00Z'
         default:
           return ''
@@ -168,7 +169,7 @@ describe('main.ts', () => {
     expect(core.setFailed).not.toHaveBeenCalled()
   })
 
-  it('Fails when timestamp is missing for "timestamp" strategy', async () => {
+  it('Fails when target_time is missing for "timestamp" strategy', async () => {
     core.getInput.mockImplementation((name: string) => {
       switch (name) {
         case 'project_id':
@@ -177,9 +178,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'timestamp'
-        case 'timestamp':
+        case 'target_time':
           return ''
         default:
           return ''
@@ -190,7 +191,7 @@ describe('main.ts', () => {
 
     // Verify action failed with appropriate error
     expect(core.setFailed).toHaveBeenCalledWith(
-      'timestamp input is required when using "timestamp" forking strategy'
+      'target_time input is required when using "timestamp" forking strategy'
     )
 
     // Verify forkService was not called
@@ -206,9 +207,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'invalid-strategy'
-        case 'timestamp':
+        case 'target_time':
           return ''
         default:
           return ''
@@ -235,9 +236,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
-        case 'timestamp':
+        case 'target_time':
           return ''
         default:
           return ''
@@ -265,9 +266,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
-        case 'timestamp':
+        case 'target_time':
           return ''
         default:
           return ''
@@ -287,7 +288,7 @@ describe('main.ts', () => {
     )
   })
 
-  it('Warns when timestamp is provided but not using timestamp strategy', async () => {
+  it('Warns when target_time is provided but not using timestamp strategy', async () => {
     core.getInput.mockImplementation((name: string) => {
       switch (name) {
         case 'project_id':
@@ -296,9 +297,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
-        case 'timestamp':
+        case 'target_time':
           return '2025-10-01T15:29:00Z'
         default:
           return ''
@@ -309,7 +310,7 @@ describe('main.ts', () => {
 
     // Verify warning was issued
     expect(core.warning).toHaveBeenCalledWith(
-      'timestamp input is ignored when not using "timestamp" forking strategy'
+      'target_time input is ignored when not using "timestamp" forking strategy'
     )
 
     // Verify fork was still successful
@@ -317,7 +318,7 @@ describe('main.ts', () => {
     expect(mockForkService).toHaveBeenCalledWith(
       'project-456',
       'service-789',
-      { fork_strategy: 'NOW' }, // timestamp should not be in the request
+      { fork_strategy: 'NOW' }, // target_time should not be in the request
       'public-key:secret-key'
     )
   })
@@ -331,7 +332,7 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
         case 'name':
           return 'my-custom-fork-name'
@@ -365,7 +366,7 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
         case 'cpu_millis':
           return '2000'
@@ -382,7 +383,7 @@ describe('main.ts', () => {
       'service-789',
       {
         fork_strategy: 'NOW',
-        cpu_millis: 2000
+        cpu_millis: '2000'
       },
       'public-key:secret-key'
     )
@@ -399,7 +400,7 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
         case 'memory_gbs':
           return '8'
@@ -416,7 +417,7 @@ describe('main.ts', () => {
       'service-789',
       {
         fork_strategy: 'NOW',
-        memory_gbs: 8
+        memory_gbs: '8'
       },
       'public-key:secret-key'
     )
@@ -424,7 +425,7 @@ describe('main.ts', () => {
     expect(core.setFailed).not.toHaveBeenCalled()
   })
 
-  it('Successfully forks a service with free=true', async () => {
+  it('Successfully forks a service with shared resources (free tier)', async () => {
     core.getInput.mockImplementation((name: string) => {
       switch (name) {
         case 'project_id':
@@ -433,10 +434,12 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
-        case 'free':
-          return 'true'
+        case 'cpu_millis':
+          return 'shared'
+        case 'memory_gbs':
+          return 'shared'
         default:
           return ''
       }
@@ -444,47 +447,14 @@ describe('main.ts', () => {
 
     await run()
 
-    // Verify forkService was called with free=true
+    // Verify forkService was called with shared resources
     expect(mockForkService).toHaveBeenCalledWith(
       'project-456',
       'service-789',
       {
         fork_strategy: 'NOW',
-        free: true
-      },
-      'public-key:secret-key'
-    )
-
-    expect(core.setFailed).not.toHaveBeenCalled()
-  })
-
-  it('Successfully forks a service with free=false', async () => {
-    core.getInput.mockImplementation((name: string) => {
-      switch (name) {
-        case 'project_id':
-          return 'project-456'
-        case 'service_id':
-          return 'service-789'
-        case 'api_key':
-          return 'public-key:secret-key'
-        case 'forking-strategy':
-          return 'now'
-        case 'free':
-          return 'false'
-        default:
-          return ''
-      }
-    })
-
-    await run()
-
-    // Verify forkService was called with free=false
-    expect(mockForkService).toHaveBeenCalledWith(
-      'project-456',
-      'service-789',
-      {
-        fork_strategy: 'NOW',
-        free: false
+        cpu_millis: 'shared',
+        memory_gbs: 'shared'
       },
       'public-key:secret-key'
     )
@@ -501,9 +471,9 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'timestamp'
-        case 'timestamp':
+        case 'target_time':
           return '2025-10-01T15:29:00Z'
         case 'name':
           return 'complete-fork'
@@ -526,8 +496,8 @@ describe('main.ts', () => {
         fork_strategy: 'PITR',
         target_time: '2025-10-01T15:29:00Z',
         name: 'complete-fork',
-        cpu_millis: 4000,
-        memory_gbs: 16
+        cpu_millis: '4000',
+        memory_gbs: '16'
       },
       'public-key:secret-key'
     )
@@ -544,7 +514,7 @@ describe('main.ts', () => {
           return 'service-789'
         case 'api_key':
           return 'public-key:secret-key'
-        case 'forking-strategy':
+        case 'fork_strategy':
           return 'now'
         default:
           return ''
