@@ -27457,14 +27457,14 @@ async function run() {
         const projectId = coreExports.getInput('project_id', { required: true });
         const serviceId = coreExports.getInput('service_id', { required: true });
         const apiKey = coreExports.getInput('api_key', { required: true });
-        const forkingStrategy = coreExports.getInput('forking-strategy', {
+        const forkStrategyInput = coreExports.getInput('fork_strategy', {
             required: true
         });
-        const timestamp = coreExports.getInput('timestamp', { required: false });
+        const targetTime = coreExports.getInput('target_time', { required: false });
         coreExports.info(`Starting fork operation for service ${serviceId}...`);
-        coreExports.info(`Fork strategy: ${forkingStrategy}`);
+        coreExports.info(`Fork strategy: ${forkStrategyInput}`);
         // Map the forking strategy to API enum
-        const forkStrategy = mapForkStrategy(forkingStrategy);
+        const forkStrategy = mapForkStrategy(forkStrategyInput);
         // Build the fork request
         const forkRequest = {
             fork_strategy: forkStrategy
@@ -27476,33 +27476,23 @@ async function run() {
         }
         const cpuMillisStr = coreExports.getInput('cpu_millis', { required: false });
         if (cpuMillisStr) {
-            const cpuMillis = parseInt(cpuMillisStr, 10);
-            if (!isNaN(cpuMillis)) {
-                forkRequest.cpu_millis = cpuMillis;
-            }
+            forkRequest.cpu_millis = cpuMillisStr;
         }
         const memoryGbsStr = coreExports.getInput('memory_gbs', { required: false });
         if (memoryGbsStr) {
-            const memoryGbs = parseInt(memoryGbsStr, 10);
-            if (!isNaN(memoryGbs)) {
-                forkRequest.memory_gbs = memoryGbs;
-            }
+            forkRequest.memory_gbs = memoryGbsStr;
         }
-        const freeStr = coreExports.getInput('free', { required: false });
-        if (freeStr) {
-            forkRequest.free = freeStr.toLowerCase() === 'true';
-        }
-        // If using PITR strategy, timestamp is required
+        // If using PITR strategy, target_time is required
         if (forkStrategy === 'PITR') {
-            if (!timestamp) {
-                throw new Error('timestamp input is required when using "timestamp" forking strategy');
+            if (!targetTime) {
+                throw new Error('target_time input is required when using "timestamp" forking strategy');
             }
-            forkRequest.target_time = timestamp;
-            coreExports.info(`Using target time: ${timestamp}`);
+            forkRequest.target_time = targetTime;
+            coreExports.info(`Using target time: ${targetTime}`);
         }
-        else if (timestamp) {
-            // Warn if timestamp is provided but not using PITR
-            coreExports.warning('timestamp input is ignored when not using "timestamp" forking strategy');
+        else if (targetTime) {
+            // Warn if target_time is provided but not using PITR
+            coreExports.warning('target_time input is ignored when not using "timestamp" forking strategy');
         }
         // Call the fork API
         coreExports.info('Calling fork service API...');
@@ -27514,6 +27504,7 @@ async function run() {
         await waitForServiceReady(projectId, forkedService.service_id, apiKey);
         // Set outputs for other workflow steps to use
         coreExports.setOutput('service_id', forkedService.service_id);
+        coreExports.setOutput('name', forkedService.name);
         // Set connection information outputs
         if (forkedService.endpoint) {
             coreExports.setOutput('host', forkedService.endpoint.host);

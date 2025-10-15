@@ -30,10 +30,9 @@ export type DeployStatus =
 export interface ForkServiceRequest {
   fork_strategy: ForkStrategy
   name?: string
-  cpu_millis?: number
-  memory_gbs?: number
+  cpu_millis?: string
+  memory_gbs?: string
   target_time?: string
-  free?: boolean
 }
 
 /**

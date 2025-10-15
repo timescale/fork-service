@@ -35,16 +35,16 @@ export async function run(): Promise<void> {
     const projectId: string = core.getInput('project_id', { required: true })
     const serviceId: string = core.getInput('service_id', { required: true })
     const apiKey: string = core.getInput('api_key', { required: true })
-    const forkingStrategy: string = core.getInput('forking-strategy', {
+    const forkStrategyInput: string = core.getInput('fork_strategy', {
       required: true
     })
-    const timestamp: string = core.getInput('timestamp', { required: false })
+    const targetTime: string = core.getInput('target_time', { required: false })
 
     core.info(`Starting fork operation for service ${serviceId}...`)
-    core.info(`Fork strategy: ${forkingStrategy}`)
+    core.info(`Fork strategy: ${forkStrategyInput}`)
 
     // Map the forking strategy to API enum
-    const forkStrategy = mapForkStrategy(forkingStrategy)
+    const forkStrategy = mapForkStrategy(forkStrategyInput)
 
     // Build the fork request
     const forkRequest: ForkServiceRequest = {
@@ -59,38 +59,27 @@ export async function run(): Promise<void> {
 
     const cpuMillisStr = core.getInput('cpu_millis', { required: false })
     if (cpuMillisStr) {
-      const cpuMillis = parseInt(cpuMillisStr, 10)
-      if (!isNaN(cpuMillis)) {
-        forkRequest.cpu_millis = cpuMillis
-      }
+      forkRequest.cpu_millis = cpuMillisStr
     }
 
     const memoryGbsStr = core.getInput('memory_gbs', { required: false })
     if (memoryGbsStr) {
-      const memoryGbs = parseInt(memoryGbsStr, 10)
-      if (!isNaN(memoryGbs)) {
-        forkRequest.memory_gbs = memoryGbs
-      }
+      forkRequest.memory_gbs = memoryGbsStr
     }
 
-    const freeStr = core.getInput('free', { required: false })
-    if (freeStr) {
-      forkRequest.free = freeStr.toLowerCase() === 'true'
-    }
-
-    // If using PITR strategy, timestamp is required
+    // If using PITR strategy, target_time is required
     if (forkStrategy === 'PITR') {
-      if (!timestamp) {
+      if (!targetTime) {
         throw new Error(
-          'timestamp input is required when using "timestamp" forking strategy'
+          'target_time input is required when using "timestamp" forking strategy'
         )
       }
-      forkRequest.target_time = timestamp
-      core.info(`Using target time: ${timestamp}`)
-    } else if (timestamp) {
-      // Warn if timestamp is provided but not using PITR
+      forkRequest.target_time = targetTime
+      core.info(`Using target time: ${targetTime}`)
+    } else if (targetTime) {
+      // Warn if target_time is provided but not using PITR
       core.warning(
-        'timestamp input is ignored when not using "timestamp" forking strategy'
+        'target_time input is ignored when not using "timestamp" forking strategy'
       )
     }
 
@@ -114,6 +103,7 @@ export async function run(): Promise<void> {
 
     // Set outputs for other workflow steps to use
     core.setOutput('service_id', forkedService.service_id)
+    core.setOutput('name', forkedService.name)
 
     // Set connection information outputs
     if (forkedService.endpoint) {
