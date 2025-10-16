@@ -16,7 +16,7 @@ Fork a Tiger Data database service for testing, development or ephemeral use.
 ```yaml
 - name: Fork Database
   id: fork
-  uses: your-org/fork-service@v1
+  uses: timescale/fork-service@v1
   with:
     project_id: your-project-id
     service_id: your-service-id
