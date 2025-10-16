@@ -58,6 +58,12 @@ jobs:
         run: npm test
 ```
 
+Note that there is also a
+[delete-service](https://github.com/timescale/delete-service) action that can be
+used to delete the forked service on your own schedule. This can be useful if
+you want to keep the forked service around for a longer period of time than the
+workflow run itself.
+
 ## Inputs
 
 | Input           | Required | Default | Description                                                                                             |
